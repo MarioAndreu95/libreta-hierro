@@ -15,7 +15,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>
-html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column}
 body{margin:0}
 img{max-width:100%}
 </style>
@@ -48,12 +49,12 @@ img{max-width:100%}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.4;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+
 button,input,select,textarea{font:inherit;color:inherit}
 input,select,textarea{font-size:16px}
 button:disabled{opacity:.4;cursor:default}
 .wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+header.top{position:relative;flex:none;padding-top:env(safe-area-inset-top,0px);z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 header.top .wrap{display:flex;align-items:center;gap:6px;min-height:60px;padding-block:10px 6px}
 h1{font-weight:900;font-size:40px;line-height:1.02;margin:0;letter-spacing:-.04em;text-wrap:balance;color:var(--fg)}
 #sheet h1{font-size:28px;letter-spacing:-.03em}
@@ -62,7 +63,7 @@ h2{font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
 .titles h1{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .titles .sub{font-size:12px;color:var(--accent);font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
 .titles h1{padding-block:2px}
-main{padding-block:8px calc(120px + env(safe-area-inset-bottom,0px))}
+main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;padding-block:8px calc(120px + env(safe-area-inset-bottom,0px))}
 .stack{display:flex;flex-direction:column;gap:12px}
 .section{display:flex;flex-direction:column;gap:10px;margin-top:24px}
 .row{display:flex;align-items:center;gap:10px}
@@ -429,6 +430,7 @@ function seed(){
 
 /* ===================== UTILIDADES ===================== */
 const $=s=>document.querySelector(s);
+const toTop=()=>{const m=document.querySelector('main'); if(m) m.scrollTop=0;};
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtKg=n=>(Math.round(n*10)/10).toLocaleString('es-ES');
 const fmtDate=(iso,opt={day:'numeric',month:'short'})=>new Date(iso).toLocaleDateString('es-ES',opt);
@@ -854,9 +856,9 @@ function renderAjustes(){
 
 /* ===================== EVENTOS ===================== */
 const ACT={
-  tab:b=>{nav.tab=b.dataset.v; if(nav.tab!=='rutinas'){} render(); window.scrollTo(0,0);},
-  openR:b=>{nav.routineId=b.dataset.id;nav.dayId=null;render();window.scrollTo(0,0);},
-  openD:b=>{nav.dayId=b.dataset.id;render();window.scrollTo(0,0);},
+  tab:b=>{nav.tab=b.dataset.v; if(nav.tab!=='rutinas'){} render(); toTop();},
+  openR:b=>{nav.routineId=b.dataset.id;nav.dayId=null;render();toTop();},
+  openD:b=>{nav.dayId=b.dataset.id;render();toTop();},
   backHome:()=>{nav.routineId=null;nav.dayId=null;render();},
   backR:()=>{nav.dayId=null;render();},
   addR:()=>{const v=$('#newR').value.trim(); if(!v){$('#newR').focus();return;} const r={id:uid(),name:v,days:[]}; state.routines.push(r); save(); nav.routineId=r.id; render(); toast('Rutina creada. Ahora añade los días.');},
@@ -866,7 +868,7 @@ const ACT={
   mvEx:b=>{const d=findD(findR(nav.routineId),nav.dayId); const i=+b.dataset.i, j=i+(+b.dataset.v); [d.exercises[i],d.exercises[j]]=[d.exercises[j],d.exercises[i]]; save(); render();},
   rmEx:b=>{const d=findD(findR(nav.routineId),nav.dayId); d.exercises.splice(+b.dataset.i,1); save(); render();},
   openPicker:b=>openPicker(b.dataset.v),
-  closePicker:()=>{closePicker(); if(afterFinish){afterFinish=false; nav.tab='rutinas'; nav.routineId=null; nav.dayId=null; render(); window.scrollTo(0,0);}},
+  closePicker:()=>{closePicker(); if(afterFinish){afterFinish=false; nav.tab='rutinas'; nav.routineId=null; nav.dayId=null; render(); toTop();}},
   pGroup:b=>{picker.group=b.dataset.v; renderPickGroups(); renderPickList(); $('#pl').parentElement.scrollTop=0;},
   pToggle:b=>{const id=b.dataset.id; picker.sel.has(id)?picker.sel.delete(id):picker.sel.add(id); b.classList.toggle('on'); const n=picker.sel.size, p=$('#pAdd'); p.textContent=n?`Añadir ${n} ejercicio${n>1?'s':''}`:'Selecciona ejercicios'; p.disabled=!n;},
   createEx:()=>{const n=$('#cxName').value.trim(); if(!n){$('#cxName').focus();return;} const g=$('#cxGroup').value; const id='c-'+slug(n)+'-'+uid().slice(0,3); state.custom.push({id,name:n,group:g,equip:'Propio'}); rebuildEx(); save(); picker.sel.add(id); picker.group=g; $('#cxName').value=''; renderPickGroups(); renderPickList(); toast('Ejercicio creado y seleccionado');},
@@ -895,7 +897,7 @@ const ACT={
     if(data.session) afterLogin(data.user); else { showLogin('Cuenta creada. Abre el email de confirmación que te hemos enviado y después entra aquí.'); $('#lgEmail').value=em; }},
   logout:async b=>{if(!armed(b))return; await push(); await SB.auth.signOut(); try{localStorage.removeItem(KEY);}catch(e){} state={routines:[],sessions:[],settings:{rest:90},custom:[],active:null,_ts:0}; rebuildEx(); nav={tab:'rutinas',routineId:null,dayId:null};},
   syncNow:async()=>{setSync('pending'); const ch=await pull(); if(ch) render(); toast(sync==='ok'?'Todo sincronizado':SYNC_TXT[sync]);},
-  backSettings:()=>{nav.tab='rutinas'; render(); window.scrollTo(0,0);},
+  backSettings:()=>{nav.tab='rutinas'; render(); toTop();},
   exGroup:b=>{exv.g=b.dataset.v; document.querySelectorAll('#exg .chip').forEach(c=>c.classList.toggle('on',c.dataset.v===exv.g)); renderExList();},
   newEx:()=>openNewEx(),
   nxPhoto:()=>$('#nxPhotoIn').click(),
@@ -918,7 +920,7 @@ const ACT={
   restSkip:()=>stopRest(),
   metric:b=>{prog.metric=b.dataset.v; renderProgreso();},
   selEx:b=>{const id=b.dataset.v; if(prog.sel.includes(id)) prog.sel=prog.sel.filter(x=>x!==id); else { if(prog.sel.length>=4){toast('Máximo 4 a la vez');return;} prog.sel.push(id);} renderProgreso();},
-  histYear:b=>{histYear+=+b.dataset.v; renderHistorial(); window.scrollTo(0,0);},
+  histYear:b=>{histYear+=+b.dataset.v; renderHistorial(); toTop();},
   openDay:b=>openDay(b.dataset.v,+(b.dataset.i||0)),
   copyBk:async b=>{const txt=JSON.stringify({app:'libreta-hierro',v:1,data:{routines:state.routines,sessions:state.sessions,settings:state.settings,custom:state.custom}});
     try{ await navigator.clipboard.writeText(txt); toast('Copia copiada. Pégala en Notas o envíatela.'); }catch(e){ const t=$('#bkIn'); t.value=txt; t.focus(); t.select(); toast('Texto seleccionado: cópialo manualmente'); }},
