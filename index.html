@@ -463,7 +463,7 @@ const ICONS={
   ajustes:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>'
 };
 function renderTabs(){
-  const t=[['rutinas','Rutinas'],['entreno','Entreno'],['progreso','Progreso'],['historial','Historial'],['ejercicios','Ejercicios']];
+  const t=[['rutinas','Rutinas'],['progreso','Progreso'],['entreno','Entreno'],['historial','Historial'],['ejercicios','Ejercicios']];
   $('#tabs').innerHTML=t.map(([k,l])=>`<button data-act="tab" data-v="${k}" class="${nav.tab===k?'on':''}" aria-label="${l}">${ICONS[k]}<span>${l}</span>${k==='entreno'&&state.active?'<i class="live"></i>':''}</button>`).join('');
 }
 function header(title, back, right='', sub=''){
