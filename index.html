@@ -785,6 +785,8 @@ function openDay(k,idx=0){
         <table class="ro-table"><thead><tr><th>Serie</th><th>kg</th><th>Reps</th><th>RIR</th></tr></thead><tbody>
         ${e.sets.map((t,i)=>`<tr><td><span class="setn" style="background:var(--surface)">${i+1}</span></td><td>${fmtKg(t.w)}</td><td>${t.r}</td><td>${t.rir??'–'}</td></tr>`).join('')}
         </tbody></table></div>`;}).join('')}
+      <button class="btn big danger" style="background:color-mix(in srgb,var(--danger) 12%,transparent);margin-top:8px" data-act="delSession" data-id="${s.id}">Eliminar entrenamiento</button>
+      <div class="muted small" style="text-align:center">Se borra de tu historial, del calendario y de las gráficas. No se puede deshacer.</div>
     </div></div>`;
   sh.querySelector('.list').scrollTop=0;
 }
@@ -924,6 +926,8 @@ const ACT={
   selEx:b=>{const id=b.dataset.v; if(prog.sel.includes(id)) prog.sel=prog.sel.filter(x=>x!==id); else { if(prog.sel.length>=4){toast('Máximo 4 a la vez');return;} prog.sel.push(id);} renderProgreso();},
   histYear:b=>{histYear+=+b.dataset.v; renderHistorial(); toTop();},
   openDay:b=>openDay(b.dataset.v,+(b.dataset.i||0)),
+  delSession:b=>{if(!armed(b))return; state.sessions=state.sessions.filter(x=>x.id!==b.dataset.id); prog.sel=null; save(); closePicker();
+    if(afterFinish){afterFinish=false; nav.tab='rutinas'; nav.routineId=null; nav.dayId=null;} render(); toast('Entrenamiento eliminado');},
   copyBk:async b=>{const txt=JSON.stringify({app:'libreta-hierro',v:1,data:{routines:state.routines,sessions:state.sessions,settings:state.settings,custom:state.custom}});
     try{ await navigator.clipboard.writeText(txt); toast('Copia copiada. Pégala en Notas o envíatela.'); }catch(e){ const t=$('#bkIn'); t.value=txt; t.focus(); t.select(); toast('Texto seleccionado: cópialo manualmente'); }},
   restoreBk:()=>{try{const o=JSON.parse($('#bkIn').value); const d=o.data||o; if(!Array.isArray(d.routines)||!Array.isArray(d.sessions)) throw 0; state={routines:d.routines,sessions:d.sessions,settings:Object.assign({rest:90},d.settings),custom:d.custom||[],active:null}; rebuildEx(); prog.sel=null; save(); render(); toast('Datos restaurados');}catch(e){toast('Ese texto no es una copia válida de la app');}},
