@@ -549,11 +549,12 @@ function renderDay(r,d){
 
 /* ===================== SELECTOR DE EJERCICIOS ===================== */
 let picker=null;
-function openPicker(mode){
-  picker={mode,group:'Todos',q:'',sel:new Set()};
+function openPicker(mode,idx=null){
+  const swapFrom=mode==='swap'&&state.active?ex(state.active.entries[idx].exId):null;
+  picker={mode,idx,group:swapFrom?swapFrom.group:'Todos',q:'',sel:new Set()};
   const sh=$('#sheet'); sh.hidden=false;
   sh.innerHTML=`<div class="head"><div class="wrap stack" style="gap:10px">
-      <div class="row"><button class="icon" data-act="closePicker" aria-label="Cerrar">✕</button><h1 class="grow" style="font-size:24px">Ejercicios</h1></div>
+      <div class="row"><button class="icon" data-act="closePicker" aria-label="Cerrar">✕</button><div class="titles grow">${swapFrom?`<span class="sub">En lugar de ${esc(swapFrom.name)}</span>`:''}<h1 style="font-size:24px">${swapFrom?'Cambiar ejercicio':'Ejercicios'}</h1></div></div>
       <input class="field" id="pq" type="search" placeholder="Buscar: press, remo, polea…" autocomplete="off">
       <div class="groups" id="pg"></div></div></div>
     <div class="list"><div class="wrap" id="pl"></div></div>
@@ -561,7 +562,7 @@ function openPicker(mode){
       <details><summary class="muted small" style="cursor:pointer">¿No está en la lista? Crea tu propio ejercicio</summary>
         <div class="stack" style="gap:8px;margin-top:8px"><input class="field" id="cxName" placeholder="Nombre del ejercicio" maxlength="50">
         <div class="row"><select class="field" id="cxGroup">${GROUPS.map(g=>`<option>${g}</option>`).join('')}</select><button class="btn" data-act="createEx">Crear</button></div></div></details>
-      <button class="btn primary big" id="pAdd" data-act="pickAdd">Añadir</button></div></div>`;
+      <button class="btn primary big" id="pAdd" data-act="pickAdd" ${swapFrom?'hidden':''}>Añadir</button></div></div>`;
   $('#pq').addEventListener('input',e=>{picker.q=e.target.value;renderPickList();});
   renderPickGroups(); renderPickList();
 }
@@ -578,6 +579,12 @@ function renderPickList(){
   }
   $('#pl').innerHTML=html||'<div class="empty" style="margin-top:16px">No hay ejercicios con ese nombre. Puedes crearlo abajo.</div>';
   const n=picker.sel.size; const b=$('#pAdd'); b.textContent=n?`Añadir ${n} ejercicio${n>1?'s':''}`:'Selecciona ejercicios'; b.disabled=!n;
+}
+function doSwap(id){
+  const i=picker.idx, e=state.active&&state.active.entries[i]; if(!e){ closePicker(); return; }
+  if(id!==e.exId){ const old=e.exId; e.orig=e.orig&&e.orig!==id?e.orig:(e.orig===id?undefined:old); if(!e.orig) delete e.orig;
+    e.exId=id; e.sets=e.sets.map(()=>({w:'',r:'',rir:'',done:false})); save(); }
+  closePicker(); render(); toast(`Cambiado por ${ex(id).name}`);
 }
 function closePicker(){ picker=null; $('#sheet').hidden=true; $('#sheet').innerHTML=''; }
 
@@ -613,7 +620,7 @@ function sessionCard(e,ei){
   const x=ex(e.exId); const prev=lastSetsFor(e.exId);
   const best=bestE1rm(e.exId);
   return `<div class="sess-ex" id="card${ei}">
-    <div class="ex-head">${exAv(x)}<div class="grow"><div class="ex-name">${esc(x.name)}</div><div class="ex-meta">Objetivo ${esc(e.reps||'—')} reps · ⏱ ${mmss(e.rest)}</div></div><button class="icon" data-act="rmSessEx" data-e="${ei}" aria-label="Quitar ejercicio">✕</button></div>
+    <div class="ex-head">${exAv(x)}<div class="grow"><div class="ex-name">${esc(x.name)}</div><div class="ex-meta">${e.orig?`En lugar de ${esc(ex(e.orig).name)} · `:''}Objetivo ${esc(e.reps||'—')} reps · ⏱ ${mmss(e.rest)}</div></div><button class="icon" data-act="swapEx" data-e="${ei}" aria-label="Cambiar ejercicio"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></button><button class="icon" data-act="rmSessEx" data-e="${ei}" aria-label="Quitar ejercicio">✕</button></div>
     <table class="sets"><thead><tr><th>Serie</th><th>Anterior</th><th>kg</th><th>Reps</th><th>RIR</th><th>✓</th></tr></thead><tbody>
     ${e.sets.map((s,si)=>{const ps=prev&&prev.sets[si];const isPr=s.done&&+s.w&&+s.r&&best&&e1rm(+String(s.w).replace(',','.'),+s.r)>best;return `<tr class="${s.done?'done':''}" id="row${ei}-${si}">
       <td><span class="setn">${si+1}</span></td>
@@ -920,8 +927,9 @@ const ACT={
   openPicker:b=>openPicker(b.dataset.v),
   closePicker:()=>{closePicker(); if(afterFinish){afterFinish=false; nav.tab='rutinas'; nav.routineId=null; nav.dayId=null; render(); toTop();}},
   pGroup:b=>{picker.group=b.dataset.v; renderPickGroups(); renderPickList(); $('#pl').parentElement.scrollTop=0;},
-  pToggle:b=>{const id=b.dataset.id; picker.sel.has(id)?picker.sel.delete(id):picker.sel.add(id); b.classList.toggle('on'); const n=picker.sel.size, p=$('#pAdd'); p.textContent=n?`Añadir ${n} ejercicio${n>1?'s':''}`:'Selecciona ejercicios'; p.disabled=!n;},
-  createEx:()=>{const n=$('#cxName').value.trim(); if(!n){$('#cxName').focus();return;} const g=$('#cxGroup').value; const id='c-'+slug(n)+'-'+uid().slice(0,3); state.custom.push({id,name:n,group:g,equip:'Propio'}); rebuildEx(); save(); picker.sel.add(id); picker.group=g; $('#cxName').value=''; renderPickGroups(); renderPickList(); toast('Ejercicio creado y seleccionado');},
+  pToggle:b=>{const id=b.dataset.id; if(picker.mode==='swap'){ doSwap(id); return; } picker.sel.has(id)?picker.sel.delete(id):picker.sel.add(id); b.classList.toggle('on'); const n=picker.sel.size, p=$('#pAdd'); p.textContent=n?`Añadir ${n} ejercicio${n>1?'s':''}`:'Selecciona ejercicios'; p.disabled=!n;},
+  swapEx:b=>{const e=state.active.entries[+b.dataset.e]; if(e.sets.some(x=>x.done)&&!armed(b)) return; openPicker('swap',+b.dataset.e);},
+  createEx:()=>{const n=$('#cxName').value.trim(); if(!n){$('#cxName').focus();return;} const g=$('#cxGroup').value; const id='c-'+slug(n)+'-'+uid().slice(0,3); state.custom.push({id,name:n,group:g,equip:'Propio'}); rebuildEx(); save(); if(picker.mode==='swap'){ doSwap(id); return; } picker.sel.add(id); picker.group=g; $('#cxName').value=''; renderPickGroups(); renderPickList(); toast('Ejercicio creado y seleccionado');},
   pickAdd:()=>{
     const ids=[...picker.sel];
     if(picker.mode==='day'){ const d=findD(findR(nav.routineId),nav.dayId); ids.forEach(id=>d.exercises.push({exId:id,sets:3,reps:'8-12',rest:state.settings.rest})); }
