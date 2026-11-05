@@ -307,6 +307,7 @@ for (const g of GROUPS) for (const it of RAW[g].split(';')) { const [n,e]=it.spl
 
 /* ===================== ESTADO ===================== */
 const KEY='libreta-hierro.v1';
+const APP_VERSION='11 (cambiar ejercicio)';
 const uid=()=>Math.random().toString(36).slice(2,9);
 let state;
 let storageOk=true;
@@ -907,7 +908,7 @@ function renderAjustes(){
     <div class="section"><h2>Limpieza</h2>
       ${hasEx?'<button class="btn" data-act="delExample">Borrar datos de ejemplo</button>':''}
       <button class="btn ghost danger" data-act="delAll">Borrar todos mis datos</button></div>
-    <div class="muted small">${BASE_EX.length} ejercicios en la base de datos · ${state.custom.length} creados por ti · ${state.sessions.length} sesiones guardadas</div>
+    <div class="muted small">Versión ${APP_VERSION} · ${BASE_EX.length} ejercicios en la base de datos · ${state.custom.length} creados por ti · ${state.sessions.length} sesiones guardadas</div>
   </div>`;
 }
 
