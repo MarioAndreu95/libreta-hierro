@@ -222,13 +222,15 @@ nav.tabs .live{position:absolute;top:6px;left:calc(50% + 10px);width:8px;height:
 .dd.fut{color:var(--muted);opacity:.45}
 .dd.today{background:var(--accent-soft);color:var(--accent);font-weight:800}
 .dd{cursor:pointer}
-.dd.deload{box-shadow:inset 0 0 0 2px var(--ok);border-radius:50%}
-.dd.deload.today{box-shadow:inset 0 0 0 2px var(--ok)}
+.dd.deload::before{content:"";position:absolute;left:50%;bottom:3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--ok)}
+.dd.deload.has::before{margin-left:1px}
+.dd.deload.has::after{margin-left:-7px}
+.dd.deload.multi::after{margin-left:-13px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;font-weight:600}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend .muted{font-weight:500}
 .lg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
-.lg-ring{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--ok);display:inline-block}
+.lg-ring{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
 .dd.has{cursor:pointer}
 .dd.has::after{content:"";position:absolute;left:50%;bottom:3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--accent)}
 .dd.has:active{background:var(--accent-soft)}
@@ -315,7 +317,7 @@ for (const g of GROUPS) for (const it of RAW[g].split(';')) { const [n,e]=it.spl
 
 /* ===================== ESTADO ===================== */
 const KEY='libreta-hierro.v1';
-const APP_VERSION='12 (días de descarga)';
+const APP_VERSION='13 (descarga en verde)';
 const uid=()=>Math.random().toString(36).slice(2,9);
 let state;
 let storageOk=true;
