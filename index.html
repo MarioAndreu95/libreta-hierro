@@ -221,6 +221,14 @@ nav.tabs .live{position:absolute;top:6px;left:calc(50% + 10px);width:8px;height:
 .dd{position:relative;aspect-ratio:1;max-width:100%;border:0;background:transparent;padding:0;font-size:11px;font-weight:600;color:var(--fg);border-radius:8px;font-variant-numeric:tabular-nums;display:flex;align-items:flex-start;justify-content:center;padding-top:2px;cursor:default}
 .dd.fut{color:var(--muted);opacity:.45}
 .dd.today{background:var(--accent-soft);color:var(--accent);font-weight:800}
+.dd{cursor:pointer}
+.dd.deload{box-shadow:inset 0 0 0 2px var(--ok);border-radius:50%}
+.dd.deload.today{box-shadow:inset 0 0 0 2px var(--ok)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:13px;font-weight:600}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend .muted{font-weight:500}
+.lg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+.lg-ring{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 2px var(--ok);display:inline-block}
 .dd.has{cursor:pointer}
 .dd.has::after{content:"";position:absolute;left:50%;bottom:3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--accent)}
 .dd.has:active{background:var(--accent-soft)}
@@ -307,7 +315,7 @@ for (const g of GROUPS) for (const it of RAW[g].split(';')) { const [n,e]=it.spl
 
 /* ===================== ESTADO ===================== */
 const KEY='libreta-hierro.v1';
-const APP_VERSION='11 (cambiar ejercicio)';
+const APP_VERSION='12 (días de descarga)';
 const uid=()=>Math.random().toString(36).slice(2,9);
 let state;
 let storageOk=true;
@@ -333,7 +341,7 @@ async function pull(){
   if((state._ts||0)>(remote._ts||0)) await push(); else setSync('ok');
   return false;
 }
-function adopt(d){ state={routines:d.routines||[],sessions:d.sessions||[],settings:Object.assign({rest:90},d.settings||{}),custom:d.custom||[],overrides:d.overrides||{},hidden:d.hidden||[],active:d.active||null,_ts:d._ts||Date.now()}; rebuildEx(); prog.sel=null; }
+function adopt(d){ state={routines:d.routines||[],sessions:d.sessions||[],settings:Object.assign({rest:90},d.settings||{}),custom:d.custom||[],overrides:d.overrides||{},hidden:d.hidden||[],deload:d.deload||[],active:d.active||null,_ts:d._ts||Date.now()}; rebuildEx(); prog.sel=null; }
 const SYNC_TXT={local:'Solo en este móvil',ok:'Sincronizado',pending:'Guardando…',error:'Error al sincronizar',offline:'Sin conexión: se subirá al volver'};
 function setSync(v){ sync=v; const el=$('#syncpill'); if(el){ el.className='syncpill '+v; el.innerHTML=`<i></i>${SYNC_TXT[v]}`; } }
 function showLogin(msg='',err=false){
@@ -783,15 +791,16 @@ function renderHistorial(){
     let cells=['L','M','X','J','V','S','D'].map(w=>`<span class="wd">${w}</span>`).join('')+'<span></span>'.repeat(off);
     for(let d=1;d<=days;d++){
       const dt=new Date(Y,m,d), k=dkey(dt), ss=byDay[k];
-      const cls=['dd',ss?'has':'',ss&&ss.length>1?'multi':'',dt>today?'fut':'',+dt===+today?'today':''].join(' ');
-      cells+=ss?`<button class="${cls}" data-act="openDay" data-v="${k}" aria-label="${d} de ${MESES[m]}: ${ss.map(x=>esc(x.dayName)).join(', ')}">${d}</button>`:`<span class="${cls}">${d}</span>`;
+      const dl=(state.deload||[]).includes(k);
+      const cls=['dd',ss?'has':'',ss&&ss.length>1?'multi':'',dt>today?'fut':'',+dt===+today?'today':'',dl?'deload':''].join(' ');
+      cells+=`<button class="${cls}" data-act="dayMenu" data-v="${k}" aria-label="${d} de ${MESES[m]}${ss?': '+ss.map(x=>esc(x.dayName)).join(', '):''}${dl?' · descarga':''}">${d}</button>`;
     }
     months+=`<div class="month"><h3>${MESES[m]}${nm?`<span>${nm}</span>`:''}</h3><div class="mgrid">${cells}</div></div>`;
   }
   $('#view').innerHTML=`<div class="stack">
     <div class="yearbar"><button class="icon" data-act="histYear" data-v="-1" aria-label="Año anterior" ${Y<=minY?'disabled':''}>‹</button><span class="y">${Y}</span><button class="icon" data-act="histYear" data-v="1" aria-label="Año siguiente" ${Y>=maxY?'disabled':''}>›</button></div>
     <div class="card ystats"><div class="stat"><div class="k">Entrenos</div><div class="v">${inYear.length}</div></div><div class="stat"><div class="k">Volumen</div><div class="v">${fmtKg(Math.round(totVol/100)/10)} t</div></div><div class="stat"><div class="k">Series</div><div class="v">${inYear.reduce((a,s)=>a+s.entries.reduce((b,e)=>b+e.sets.length,0),0)}</div></div></div>
-    <div class="muted small">Toca un día con punto para ver ese entreno.</div>
+    <div class="legend"><span><i class="lg-dot"></i>Entreno</span><span><i class="lg-ring"></i>Descarga${(()=>{const n=(state.deload||[]).filter(k=>k.startsWith(Y+'-')).length;return n?` (${n})`:'';})()}</span><span class="muted">Toca un día para ver o marcar</span></div>
     <div class="months">${months}</div>
   </div>`;
   const cur=document.querySelectorAll('.month')[today.getMonth()];
@@ -867,6 +876,17 @@ function openExMenu(id){
     <button class="btn big danger" style="background:color-mix(in srgb,var(--danger) 12%,transparent)" data-act="delEx" data-id="${id}">Eliminar ejercicio</button>
     <button class="btn big ghost" data-act="closeMenu">Cancelar</button></div></div>`;
   try{navigator.vibrate&&navigator.vibrate(12);}catch(err){}
+}
+function openDayMenu(k){
+  const ss=sessionsByDay()[k]||[], dl=(state.deload||[]).includes(k);
+  const [y,m,d]=k.split('-').map(Number), dt=new Date(y,m-1,d);
+  const M=$('#menu'); M.hidden=false;
+  M.innerHTML=`<div class="menu-bg" data-act="closeMenu"></div><div class="menu-panel"><div class="wrap stack" style="gap:8px">
+    <div style="padding:4px 0 8px"><div style="font-weight:800;font-size:18px;text-transform:capitalize">${esc(dt.toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'}))}</div>
+      <div class="muted small">${ss.length?ss.map(x=>esc(x.dayName)).join(' · '):'Sin entreno'}${dl?' · Día de descarga':''}</div></div>
+    ${ss.map((x,i)=>`<button class="btn big" data-act="openDay" data-v="${k}" data-i="${i}">Ver entrenamiento${ss.length>1?' · '+esc(x.dayName):''}</button>`).join('')}
+    <button class="btn big" style="${dl?'':'background:var(--ok-soft);color:var(--ok)'}" data-act="toggleDeload" data-v="${k}">${dl?'Quitar día de descarga':'Marcar como día de descarga'}</button>
+    <button class="btn big ghost" data-act="closeMenu">Cancelar</button></div></div>`;
 }
 function closeMenu(){ const M=$('#menu'); M.hidden=true; M.innerHTML=''; }
 (function(){ let t=null,x0=0,y0=0,fired=false;
@@ -991,12 +1011,14 @@ const ACT={
   metric:b=>{prog.metric=b.dataset.v; renderProgreso();},
   selEx:b=>{const id=b.dataset.v; if(prog.sel.includes(id)) prog.sel=prog.sel.filter(x=>x!==id); else { if(prog.sel.length>=4){toast('Máximo 4 a la vez');return;} prog.sel.push(id);} renderProgreso();},
   histYear:b=>{histYear+=+b.dataset.v; renderHistorial(); toTop();},
-  openDay:b=>openDay(b.dataset.v,+(b.dataset.i||0)),
+  openDay:b=>{closeMenu(); openDay(b.dataset.v,+(b.dataset.i||0));},
+  dayMenu:b=>openDayMenu(b.dataset.v),
+  toggleDeload:b=>{const k=b.dataset.v; const L=new Set(state.deload||[]); const on=!L.has(k); on?L.add(k):L.delete(k); state.deload=[...L].sort(); save(); closeMenu(); renderHistorial(); toast(on?'Marcado como día de descarga':'Día de descarga quitado');},
   delSession:b=>{if(!armed(b))return; state.sessions=state.sessions.filter(x=>x.id!==b.dataset.id); prog.sel=null; save(); closePicker();
     if(afterFinish){afterFinish=false; nav.tab='rutinas'; nav.routineId=null; nav.dayId=null;} render(); toast('Entrenamiento eliminado');},
-  copyBk:async b=>{const txt=JSON.stringify({app:'libreta-hierro',v:1,data:{routines:state.routines,sessions:state.sessions,settings:state.settings,custom:state.custom,overrides:state.overrides||{},hidden:state.hidden||[]}});
+  copyBk:async b=>{const txt=JSON.stringify({app:'libreta-hierro',v:1,data:{routines:state.routines,sessions:state.sessions,settings:state.settings,custom:state.custom,overrides:state.overrides||{},hidden:state.hidden||[],deload:state.deload||[]}});
     try{ await navigator.clipboard.writeText(txt); toast('Copia copiada. Pégala en Notas o envíatela.'); }catch(e){ const t=$('#bkIn'); t.value=txt; t.focus(); t.select(); toast('Texto seleccionado: cópialo manualmente'); }},
-  restoreBk:()=>{try{const o=JSON.parse($('#bkIn').value); const d=o.data||o; if(!Array.isArray(d.routines)||!Array.isArray(d.sessions)) throw 0; state={routines:d.routines,sessions:d.sessions,settings:Object.assign({rest:90},d.settings),custom:d.custom||[],overrides:d.overrides||{},hidden:d.hidden||[],active:null}; rebuildEx(); prog.sel=null; save(); render(); toast('Datos restaurados');}catch(e){toast('Ese texto no es una copia válida de la app');}},
+  restoreBk:()=>{try{const o=JSON.parse($('#bkIn').value); const d=o.data||o; if(!Array.isArray(d.routines)||!Array.isArray(d.sessions)) throw 0; state={routines:d.routines,sessions:d.sessions,settings:Object.assign({rest:90},d.settings),custom:d.custom||[],overrides:d.overrides||{},hidden:d.hidden||[],deload:d.deload||[],active:null}; rebuildEx(); prog.sel=null; save(); render(); toast('Datos restaurados');}catch(e){toast('Ese texto no es una copia válida de la app');}},
   delExample:b=>{if(!armed(b))return; state.routines=state.routines.filter(r=>!r.example); state.sessions=state.sessions.filter(s=>!s.example); if(state.active&&!findR(state.active.routineId)) state.active=null; prog.sel=null; save(); render(); toast('Datos de ejemplo borrados');},
   delAll:b=>{if(!armed(b))return; state={routines:[],sessions:[],settings:state.settings,custom:[],active:null}; rebuildEx(); prog.sel=null; stopRest(); save(); render(); toast('Todo borrado');}
 };
